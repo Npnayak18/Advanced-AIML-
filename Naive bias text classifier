@@ -1,0 +1,49 @@
+from collections import defaultdict
+import math
+
+data = [
+    ("win money now", "spam"),
+    ("limited offer claim", "spam"),
+    ("meet me at college", "ham"),
+    ("project review meeting", "ham"),
+    ("you won a lottery", "spam"),
+    ("let us go for lunch", "ham"),
+]
+
+def tokenize(s):
+    return s.lower().split()
+
+classes = {"spam", "ham"}
+word_counts = {c: defaultdict(int) for c in classes}
+class_counts = defaultdict(int)
+vocab = set()
+
+for text, label in data:
+    class_counts[label] += 1
+    for w in tokenize(text):
+        word_counts[label][w] += 1
+        vocab.add(w)
+
+def predict(text):
+    words = tokenize(text)
+    total_docs = sum(class_counts.values())
+    scores = {}
+    for c in classes:
+        log_prob = math.log(class_counts[c] / total_docs)
+        total_words = sum(word_counts[c].values())
+        for w in words:
+            count = word_counts[c][w] + 1
+            log_prob += math.log(count / (total_words + len(vocab)))
+        scores[c] = log_prob
+    return max(scores, key=scores.get), scores
+
+tests = [
+    "win a lottery now",
+    "project meeting now",
+    "claim your offer",
+    "go for lunch",
+]
+
+for t in tests:
+    label, s = predict(t)
+    print(t, "=>", label)
