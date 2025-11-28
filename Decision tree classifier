@@ -1,0 +1,68 @@
+import numpy as np
+
+X = np.array([
+    [1, 1],
+    [1, 2],
+    [2, 1],
+    [2, 2],
+    [3, 1],
+    [3, 2],
+])
+y = np.array([0, 0, 0, 1, 1, 1])
+
+def gini(labels):
+    classes, counts = np.unique(labels, return_counts=True)
+    p = counts / counts.sum()
+    return 1 - np.sum(p ** 2)
+
+def best_split(X, y):
+    best_feat, best_thresh, best_gini = None, None, 1.0
+    n_samples, n_features = X.shape
+    for f in range(n_features):
+        values = np.unique(X[:, f])
+        for t in values:
+            left = y[X[:, f] <= t]
+            right = y[X[:, f] > t]
+            if len(left) == 0 or len(right) == 0:
+                continue
+            g = (len(left)*gini(left) + len(right)*gini(right)) / n_samples
+            if g < best_gini:
+                best_gini = g
+                best_feat = f
+                best_thresh = t
+    return best_feat, best_thresh
+
+class Node:
+    def __init__(self, feature=None, thresh=None, left=None, right=None, value=None):
+        self.feature = feature
+        self.thresh = thresh
+        self.left = left
+        self.right = right
+        self.value = value
+
+def build_tree(X, y, depth=0, max_depth=3):
+    if len(np.unique(y)) == 1 or depth >= max_depth:
+        values, counts = np.unique(y, return_counts=True)
+        return Node(value=values[np.argmax(counts)])
+    feat, thr = best_split(X, y)
+    if feat is None:
+        values, counts = np.unique(y, return_counts=True)
+        return Node(value=values[np.argmax(counts)])
+    left_idx = X[:, feat] <= thr
+    right_idx = X[:, feat] > thr
+    left = build_tree(X[left_idx], y[left_idx], depth+1, max_depth)
+    right = build_tree(X[right_idx], y[right_idx], depth+1, max_depth)
+    return Node(feature=feat, thresh=thr, left=left, right=right)
+
+def predict_one(node, x):
+    if node.value is not None:
+        return node.value
+    if x[node.feature] <= node.thresh:
+        return predict_one(node.left, x)
+    else:
+        return predict_one(node.right, x)
+
+tree = build_tree(X, y)
+
+for sample in X:
+    print(sample, "=>", predict_one(tree, sample))
